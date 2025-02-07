@@ -9,9 +9,6 @@ A straightforward Ansible playbook to automate Proxmox cluster updates.
 3. Run: `ansible-playbook -i inventory.ini update_proxmox.yml`
 4. Enter your root password
 
-Note: Hosts are automatically rebooted.
-To disable, uncomment `reboot_required.stat.exists` under `update_proxmox.yml`
-
 ## Prerequisites
 
 - Ansible ([Installation Guide](https://docs.ansible.com/ansible/latest/installation_guide/installation_distros.html))

@@ -1,0 +1,63 @@
+---
+- name: Update Proxmox VE Servers
+  hosts: proxmox_hosts
+  serial: 2
+  gather_facts: true
+  vars:
+    update_reboot: true
+  vars_prompt:
+    - name: ansible_password
+      prompt: "Enter password for Proxmox servers"
+      private: yes
+  
+  pre_tasks:
+    - name: Check Proxmox VE version
+      command: pveversion
+      register: pve_version
+      changed_when: false
+  
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Check for available updates
+      apt:
+        update_cache: yes
+      check_mode: yes
+      register: updates_available
+
+    - name: Perform system upgrade
+      apt:
+        upgrade: dist
+        force_apt_get: yes
+      when: updates_available.changed
+      register: upgrade_result
+
+
+    - name: Check if reboot is required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+
+    - name: Reboot server if required and enabled
+      reboot:
+        msg: "Rebooting after system updates"
+        connect_timeout: 300
+        reboot_timeout: 600
+        pre_reboot_delay: 0
+        post_reboot_delay: 60
+      when: 
+      #  - reboot_required.stat.exists
+        - update_reboot | bool
+
+    - name: Check cluster status if applicable
+      shell: pvecm status
+      register: cluster_status
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Send notification of completion
+      debug:
+        msg: "Update completed on {{ inventory_hostname }}. Reboot status: {{ 'Performed' if (reboot_required.stat.exists and update_reboot) else 'Not required or disabled' }}"
